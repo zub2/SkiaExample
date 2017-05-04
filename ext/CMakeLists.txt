@@ -18,6 +18,12 @@ set(SKIA_INSTALL_DIR "TODO")
 set(SKIA_C_FLAGS -Wno-error ${CMAKE_C_FLAGS})
 set(SKIA_CXX_FLAGS -Wno-error ${CMAKE_CXS_FLAGS})
 
+if (MAKE_BUILD_TYPE MATCHES DEBUG)
+	set(SKIA_DEBUG "is_debug=true")
+else ()
+	set(SKIA_DEBUG "is_debug=false")
+endif ()
+
 ExternalProject_Add(SKIA_build
 	# This is needed for list expansion of C(XX)_FLAGS.
 	LIST_SEPARATOR ","
@@ -52,11 +58,22 @@ skia_use_mesa=false \
 skia_use_piex=false \
 skia_use_vulkan=false \
 skia_use_zlib=true \
+${SKIA_DEBUG} \
 "
 	BUILD_COMMAND ninja -C ${SKIA_BUILD_DIR} -j1
 	# AFAIK there is not install step provided
 	INSTALL_COMMAND true
 )
+
+option(ENABLE_EXT_SKIA_REBUILD OFF)
+if (ENABLE_EXT_SKIA_REBUILD)
+	# Make sure the target is always rebuilt.
+	# Without this changing Skia sources doesn't trigger a ninja build. With this
+	# ninja build is always triggered. This is not needed if you never touch the
+	# Skia sources. Please note that enabling this ends up with re-running of
+	# targets that depend on the library. :(
+	ExternalProject_Add_Step(SKIA_build ForceBuild COMMAND true DEPENDERS build ALWAYS 1)
+endif ()
 
 # taken from BUILD.gn (skia_public_includes, minus things that are obviously useless for us)
 set(SKIA_HEADERS
@@ -73,6 +90,14 @@ set(SKIA_HEADERS
 	${SKIA_SRC}/include/utils
 )
 
+# this must match what BUILD.gn sets
+# if it's wrong it can result in all kinds of funny behavior
+set(SKIA_DEFINES
+	SK_HAS_PNG_LIBRARY
+	SK_SAMPLES_FOR_X # always set for linux, event if there's no X used
+	SK_SUPPORT_GPU=1 # TODO: this depends on GPU compile options
+)
+
 find_library(LIBDL dl)
 # TODO: this is just temporary
 find_library(LIBGL GL)
@@ -86,6 +111,7 @@ add_library(SKIA STATIC IMPORTED GLOBAL)
 set_target_properties(SKIA PROPERTIES
 	IMPORTED_LOCATION "${SKIA_BUILD_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}skia${CMAKE_STATIC_LIBRARY_SUFFIX}"
 	INTERFACE_INCLUDE_DIRECTORIES "${SKIA_HEADERS}"
+	INTERFACE_COMPILE_DEFINITIONS "${SKIA_DEFINES}"
 	IMPORTED_LINK_INTERFACE_LIBRARIES "${LIBDL};${FONTCONFIG_LIBRARIES};${PNG_LIBRARIES};${LIBPTHREAD};${LIBGL}"
 )
 add_dependencies(SKIA SKIA_build)
