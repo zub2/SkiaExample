@@ -32,9 +32,14 @@ void raster(int width, int height, void (*draw)(SkCanvas&), const char* path)
 
 void drawTest(SkCanvas &canvas)
 {
+	canvas.clear(SK_ColorWHITE);
+
 	SkPaint paint;
-	paint.setColor(SK_ColorRED);
-	canvas.drawPaint(paint);
+	paint.setTextSize(32.0f);
+	paint.setAntiAlias(true);
+	paint.setColor(SK_ColorBLACK);
+	paint.setStyle(SkPaint::kFill_Style);
+	canvas.drawString("Skia Test", 20, 32, paint);
 }
 
 int main()
