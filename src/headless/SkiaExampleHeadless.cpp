@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdexcept>
 
 #include <SkData.h>
 #include <SkImage.h>
@@ -10,21 +11,21 @@ void raster(int width, int height, void (*draw)(SkCanvas&), const char* path)
 {
 	sk_sp<SkSurface> rasterSurface = SkSurface::MakeRasterN32Premul(width, height);
 	if (!rasterSurface)
-		return;
+		throw std::runtime_error("can't create surface");
 
 	SkCanvas* rasterCanvas = rasterSurface->getCanvas();
 	if (!rasterCanvas)
-		return;
+		throw std::runtime_error("can't get canvas");
 
 	draw(*rasterCanvas);
 
 	sk_sp<SkImage> img(rasterSurface->makeImageSnapshot());
 	if (!img)
-		return;
+		throw std::runtime_error("can't make image snapshot");
 
 	sk_sp<SkData> png(img->encode());
 	if (!png)
-		return;
+		throw std::runtime_error("can't encode png");
 
 	SkFILEWStream out(path);
 	out.write(png->data(), png->size());
@@ -44,5 +45,10 @@ void drawTest(SkCanvas &canvas)
 
 int main()
 {
-	raster(100, 100, drawTest, "test.png");
+	const char *testFileName = "test.png";
+	const int WIDTH = 100;
+	const int HEIGHT = 100;
+
+	std::cout << "Writing test output to " << testFileName << std::endl;
+	raster(WIDTH, HEIGHT, drawTest, testFileName);
 }
