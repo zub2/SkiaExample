@@ -12,22 +12,21 @@ else ()
 	set(IS_DEBUG_BUILD OFF)
 endif ()
 
+# I wanted to expose (almost) all Skia options as CMake options but sadly
+# GN is a really bad tool - It produces non-overridable configure
+# errors like:
+#
+# The variable "skia_use_system_libjpeg_turbo" was set as a build argument but never appeared in a declare_args() block in any buildfile.
+#
+# ... even though the option exists (this one in skia/third_party/libjpeg-turbo/BUILD.gb)
+# and it's listed in gn args --list.
+# (It seems to be caused by the fact that some options are only actually used when other
+# options are set appropriately. But it's not always obvious - one would have to dig into
+# Skia configuration. And replicating the dependencies here + propagating it correctly into
+# the ExternalProject setup is beyond reasonable.
 option(EXT_SKIA_ALWAYS_BUILD "" OFF)
 option(EXT_SKIA_DEBUG "" ${IS_DEBUG_BUILD})
 option(EXT_SKIA_SHARED "build a shared lbrary (ON) or a static library (OFF)" OFF)
-option(EXT_SKIA_OFFICIAL_BUILD "Ignored when EXT_SKIA_DEBUG is ON." ON)
-option(EXT_SKIA_ENABLE_GPU "" ON)
-option(EXT_SKIA_USE_EGL "When EXT_SKIA_ENABGLE_GPU is ON: ON: use EGL, OFF: use GL+GLU" OFF)
-option(EXT_SKIA_USE_ICU "" ON)
-option(EXT_SKIA_USE_LIBPNG "" ON)
-option(EXT_SKIA_USE_EXPAT "" ON)
-option(EXT_SKIA_USE_SYSTEM_EXPAT "When EXT_SKIA_USE_EXPAT is ON: use libexpat from the system" ON)
-option(EXT_SKIA_USE_LIBJPEG_TURBO "" OFF)
-option(EXT_SKIA_USE_LIBWEBP "" OFF)
-option(EXT_SKIA_USE_ZLIB "" ON)
-option(EXT_SKIA_ENABLE_PDF "" OFF)
-option(EXT_SKIA_USE_FONTCONFIG "" ON)
-option(EXT_SKIA_USE_FREETYPE "" ON)
 
 set(SKIA_SRC "${CMAKE_CURRENT_SOURCE_DIR}/skia")
 
@@ -49,27 +48,15 @@ function(SET_SKIA_CONFIG_OPTION OPT_NAME OPT_VALUE)
 	endif ()
 endfunction()
 
+SET_SKIA_CONFIG_OPTION(SK_CONF_DEBUG ${EXT_SKIA_DEBUG})
+SET_SKIA_CONFIG_OPTION(SK_CONF_SHARED ${EXT_SKIA_SHARED})
+
 # it's not possible to enable both OFFICIAL and DEBUG
 if (EXT_SKIA_OFFICIAL_BUILD AND NOT EXT_SKIA_DEBUG)
 	set(SK_CONF_IS_OFFICIAL_BUILD "true")
 else ()
 	set(SK_CONF_IS_OFFICIAL_BUILD "false")
 endif ()
-
-SET_SKIA_CONFIG_OPTION(SK_CONF_DEBUG ${EXT_SKIA_DEBUG})
-SET_SKIA_CONFIG_OPTION(SK_CONF_SHARED ${EXT_SKIA_SHARED})
-SET_SKIA_CONFIG_OPTION(SK_CONF_ENABLE_GPU ${EXT_SKIA_ENABLE_GPU})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_EGL ${EXT_SKIA_USE_EGL})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_ICU ${EXT_SKIA_USE_ICU})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_LIBPNG ${EXT_SKIA_USE_LIBPNG})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_EXPAT ${EXT_SKIA_USE_EXPAT})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_SYSTEM_EXPAT ${EXT_SKIA_USE_SYSTEM_EXPAT})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_LIBJPEG_TURBO ${EXT_SKIA_USE_LIBJPEG_TURBO})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_LIBWEBP ${EXT_SKIA_USE_LIBWEBP})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_ZLIB ${EXT_SKIA_USE_ZLIB})
-SET_SKIA_CONFIG_OPTION(SK_CONF_ENABLE_PDF ${EXT_SKIA_ENABLE_PDF})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_FONTCONFIG ${EXT_SKIA_USE_FONTCONFIG})
-SET_SKIA_CONFIG_OPTION(SK_CONF_USE_FREETYPE ${EXT_SKIA_USE_FREETYPE})
 
 ExternalProject_Add(SKIA_build
 	# This is needed for list expansion of C(XX)_FLAGS.
@@ -90,26 +77,31 @@ extra_cflags_cc=[\"${SKIA_CXX_FLAGS}\"] \
 is_official_build=${SK_CONF_IS_OFFICIAL_BUILD} \
 is_component_build=${SK_CONF_SHARED} \
 is_debug=${SK_CONF_DEBUG} \
-skia_enable_gpu=${SK_CONF_ENABLE_GPU} \
-skia_enable_pdf=${SK_CONF_ENABLE_PDF} \
-skia_use_egl=${SK_CONF_USE_EGL} \
-skia_use_expat=${SK_CONF_USE_EXPAT} \
-skia_use_system_expat=${SK_CONF_USE_SYSTEM_EXPAT} \
-skia_use_fontconfig=${SK_CONF_USE_FONTCONFIG} \
-skia_use_freetype=${SK_CONF_USE_FREETYPE} \
-skia_use_icu=${SK_CONF_USE_ICU} \
-skia_use_libjpeg_turbo=${SK_CONF_USE_LIBJPEG_TURBO} \
-skia_use_libpng=${SK_CONF_USE_LIBPNG} \
-skia_use_zlib=${SK_CONF_USE_ZLIB} \
-skia_use_libwebp=${SK_CONF_USE_LIBWEBP} \
+skia_enable_gpu=true \
+skia_use_egl=false \
+skia_use_vulkan=false \
+skia_enable_vulkan_debug_layers=false \
+skia_enable_spirv_validation=false \
+skia_use_icu=true \
+skia_use_system_icu=true \
+skia_use_expat=true \
+skia_use_system_expat=true \
+skia_use_libjpeg_turbo=false \
+skia_use_libpng=true \
+skia_use_system_libpng=true \
+skia_use_zlib=true \
+skia_use_system_zlib=true \
+skia_use_libwebp=false \
+skia_enable_pdf=true \
+skia_use_sfntly=true \
+skia_use_fontconfig=true \
+skia_use_freetype=true \
+skia_use_system_freetype2=true \
 skia_enable_tools=false \
 skia_use_lua=false \
 skia_use_mesa=false \
 skia_use_piex=false \
-skia_use_vulkan=false \
-skia_enable_spirv_validation=false \
 skia_use_dng_sdk=false \
-skia_use_sfntly=false \
 "
 	BUILD_COMMAND ninja -C ${SKIA_BUILD_DIR} -j1
 	# AFAIK there is not install step provided
@@ -143,29 +135,22 @@ set(SKIA_HEADERS
 # this must match what BUILD.gn sets
 # if it's wrong it can result in all kinds of funny behavior
 set(SKIA_DEFINES
-	SK_SAMPLES_FOR_X # always set for linux, even if there's no X used
+	"SK_SAMPLES_FOR_X" # always set for linux, even if there's no X used
+	"SK_SUPPORT_GPU=1" # skia_enable_gpu
+	#"SK_VULKAN" # skia_use_vulkan
+	#"SK_ENABLE_VK_LAYERS" # skia_enable_vulkan_debug_layers
+	#"SK_ENABLE_SPIRV_VALIDATION" # skia_enable_spirv_validation
+	#"SK_HAS_JPEG_LIBRARY" # skia_use_libjpeg_turbo
+	"SK_HAS_PNG_LIBRARY" # skia_use_libpng
+	"SK_SUPPORT_PDF" # skia_enable_pdf
+	"SK_PDF_USE_SFNTLY" # skia_use_sfntly
+	#"SK_HAS_WEBP_LIBRARY" # skia_use_libwebp
+	"SK_XML" # skia_use_expat
 )
 
-function(ADD_SKIA_DEFINES IS_ENABLED IF_ENABLED_DEFINE_LIST)
-	if (IS_ENABLED)
-		set(SKIA_DEFINES "${SKIA_DEFINES};${IF_ENABLED_DEFINE_LIST}" PARENT_SCOPE)
-	else (IS_ENABLED)
-		# optionaly define for the not-enabled case can be specified
-		if (ARGN EQUAL 1)
-			set(SKIA_DEFINES "${SKIA_DEFINES};${ARGV1}" PARENT_SCOPE)
-		endif ()
-		if (ARGN GREATER 1)
-			message(FATAL_ERROR "ADD_SKIA_DEFINES: wrong number of arguments!")
-		endif ()
-	endif (IS_ENABLED)
-endfunction()
-
-ADD_SKIA_DEFINES(${EXT_SKIA_ENABLE_GPU} "SK_SUPPORT_GPU=1" "SK_SUPPORT_GPU=0")
-ADD_SKIA_DEFINES(${EXT_SKIA_USE_LIBPNG} "SK_HAS_PNG_LIBRARY")
-ADD_SKIA_DEFINES(${EXT_SKIA_USE_LIBJPEG_TURBO} "SK_HAS_JPEG_LIBRARY")
-ADD_SKIA_DEFINES(${EXT_SKIA_ENABLE_PDF} "SK_SUPPORT_PDF")
-ADD_SKIA_DEFINES(${EXT_SKIA_USE_LIBWEBP} "SK_HAS_WEBP_LIBRARY")
-ADD_SKIA_DEFINES(${EXT_SKIA_USE_EXPAT} "SK_XML")
+if (SK_CONF_SHARED)
+	liast(APPEND SKIA_DEFINES "SKIA_DLL")
+endif ()
 
 # GN doesn't seem to do any fancy stuff with library dependencies - it just
 # asks the compiler to link to them w/o any fany search strategies. This
@@ -177,41 +162,48 @@ ADD_SKIA_DEFINES(${EXT_SKIA_USE_EXPAT} "SK_XML")
 # This is needed only for static library build where we need to the dependencies
 # explicitly.
 if (NOT EXT_SKIA_SHARED)
-	function(ADD_SKIA_LIBRARY_DEPENDENCY IS_ENABLED LIB_NAME_LIST)
-		if (IS_ENABLED)
-			foreach(LIB_NAME ${LIB_NAME_LIST})
-				message(STATUS "Searching for ${LIB_NAME}...")
-				find_library(LIB ${LIB_NAME})
-				if (NOT LIB)
-					message(FATAL_ERROR "Can't find required library ${LIB_NAME}.")
-				endif ()
-				set(SKIA_DEPENDENCIES "${SKIA_DEPENDENCIES};${LIB}" PARENT_SCOPE)
-			endforeach()
-		endif (IS_ENABLED)
+	function(ADD_SKIA_LIBRARY_DEPENDENCY LIB_NAME_LIST)
+		foreach(LIB_NAME ${LIB_NAME_LIST})
+			message(STATUS "Searching for ${LIB_NAME}...")
+			find_library(LIB${LIB_NAME} ${LIB_NAME})
+			if (NOT LIB${LIB_NAME})
+				message(FATAL_ERROR "Can't find required library ${LIB_NAME}.")
+			endif ()
+			set(SKIA_DEPENDENCIES "${SKIA_DEPENDENCIES};${LIB${LIB_NAME}}" PARENT_SCOPE)
+		endforeach()
 	endfunction()
 
 	# seem to be always required...
-	ADD_SKIA_LIBRARY_DEPENDENCY(ON "dl")
-	ADD_SKIA_LIBRARY_DEPENDENCY(ON "pthread")
+	ADD_SKIA_LIBRARY_DEPENDENCY("dl")
+	ADD_SKIA_LIBRARY_DEPENDENCY("pthread")
 
-	ADD_SKIA_LIBRARY_DEPENDENCY(${EXT_SKIA_USE_SYSTEM_EXPAT} "expat")
-	ADD_SKIA_LIBRARY_DEPENDENCY(${EXT_SKIA_USE_SYSTEM_EXPAT} "png")
+	# when skia_enable_gpu:
+	#ADD_SKIA_LIBRARY_DEPENDENCY("EGL") # skia_use_egl
+	ADD_SKIA_LIBRARY_DEPENDENCY("GL") # !skia_use_egl # TODO: GLU?
 
-	if (EXT_SKIA_ENABLE_GPU)
-		if (EXT_SKIA_USE_EGL)
-			ADD_SKIA_LIBRARY_DEPENDENCY(ON "EGL")
-		else ()
-			ADD_SKIA_LIBRARY_DEPENDENCY(ON "GL;GLU")
-		endif ()
-	endif (EXT_SKIA_ENABLE_GPU)
+	ADD_SKIA_LIBRARY_DEPENDENCY("icuuc") # skia_use_system_icu
+	ADD_SKIA_LIBRARY_DEPENDENCY("expat") #skia_use_system_expat
+	#ADD_SKIA_LIBRARY_DEPENDENCY("jpeg") # skia_use_system_libjpeg_turbo
+	ADD_SKIA_LIBRARY_DEPENDENCY("png") # skia_use_system_libpng
+	ADD_SKIA_LIBRARY_DEPENDENCY(${EXT_SKIA_USE_SYSTEM_ZLIB} "z") # skia_use_system_zlib
 
-	ADD_SKIA_LIBRARY_DEPENDENCY(${EXT_SKIA_USE_FONTCONFIG} "fontconfig")
-	ADD_SKIA_LIBRARY_DEPENDENCY(${EXT_SKIA_USE_FREETYPE} "freetype")
+	# webp integration doesn't expose the system option...
+	#ADD_SKIA_LIBRARY_DEPENDENCY("webp") # SK_CONF_IS_OFFICIAL_BUILD && skia_use_libwebp
+
+	ADD_SKIA_LIBRARY_DEPENDENCY(${EXT_SKIA_USE_FONTCONFIG} "fontconfig") # skia_use_fontconfig
+	ADD_SKIA_LIBRARY_DEPENDENCY(${EXT_SKIA_USE_FREETYPE2} "freetype") # skia_use_system_freetype2
 endif (NOT EXT_SKIA_SHARED)
 
-add_library(SKIA STATIC IMPORTED GLOBAL)
+if (EXT_SKIA_SHARED)
+	add_library(SKIA SHARED IMPORTED GLOBAL)
+	set(SKIA_LIBRARY "${SKIA_BUILD_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}skia${CMAKE_SHARED_LIBRARY_SUFFIX}")
+else (EXT_SKIA_SHARED)
+	add_library(SKIA STATIC IMPORTED GLOBAL)
+	set(SKIA_LIBRARY "${SKIA_BUILD_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}skia${CMAKE_STATIC_LIBRARY_SUFFIX}")
+endif (EXT_SKIA_SHARED)
+
 set_target_properties(SKIA PROPERTIES
-	IMPORTED_LOCATION "${SKIA_BUILD_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}skia${CMAKE_STATIC_LIBRARY_SUFFIX}"
+	IMPORTED_LOCATION "${SKIA_LIBRARY}"
 	INTERFACE_INCLUDE_DIRECTORIES "${SKIA_HEADERS}"
 	INTERFACE_COMPILE_DEFINITIONS "${SKIA_DEFINES}"
 	IMPORTED_LINK_INTERFACE_LIBRARIES "${SKIA_DEPENDENCIES}"
