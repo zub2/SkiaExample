@@ -6,5 +6,12 @@ cmake_minimum_required(VERSION 3.0)
 # it as compile option.
 add_compile_options(-std=c++11)
 
+find_package(PkgConfig)
+find_package(PNG REQUIRED)
+find_library(LIBPTHREAD pthread)
+if (NOT LIBPTHREAD)
+	message(FATAL_ERROR "Can't find libpthread")
+endif()
+
 add_subdirectory(ext)
 add_subdirectory(src)

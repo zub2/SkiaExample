@@ -41,9 +41,9 @@ skia_use_egl=false \
 skia_enable_spirv_validation=false \
 skia_enable_tools=false \
 skia_use_expat=false \
-skia_use_fontconfig=false \
-skia_use_freetype=false \
-skia_use_icu=false \
+skia_use_fontconfig=true \
+skia_use_freetype=true \
+skia_use_icu=true \
 skia_use_libjpeg_turbo=false \
 skia_use_libpng=true \
 skia_use_libwebp=false \
@@ -54,4 +54,38 @@ skia_use_vulkan=false \
 skia_use_zlib=true \
 "
 	BUILD_COMMAND ninja -C ${SKIA_BUILD_DIR} -j1
+	# AFAIK there is not install step provided
+	INSTALL_COMMAND true
 )
+
+# taken from BUILD.gn (skia_public_includes, minus things that are obviously useless for us)
+set(SKIA_HEADERS
+	${SKIA_SRC}/include/c
+	${SKIA_SRC}/include/codec
+	${SKIA_SRC}/include/config
+	${SKIA_SRC}/include/core
+	${SKIA_SRC}/include/effects
+	${SKIA_SRC}/include/gpu
+	${SKIA_SRC}/include/gpu/gl
+	${SKIA_SRC}/include/pathops
+	${SKIA_SRC}/include/ports
+	${SKIA_SRC}/include/svg
+	${SKIA_SRC}/include/utils
+)
+
+find_library(LIBDL dl)
+# TODO: this is just temporary
+find_library(LIBGL GL)
+if (NOT LIBGL)
+	message(FATAL_ERROR "Can't find libGL")
+endif()
+#find_package(Freetype REQUIRED)
+pkg_check_modules(FONTCONFIG REQUIRED fontconfig)
+
+add_library(SKIA STATIC IMPORTED GLOBAL)
+set_target_properties(SKIA PROPERTIES
+	IMPORTED_LOCATION "${SKIA_BUILD_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}skia${CMAKE_STATIC_LIBRARY_SUFFIX}"
+	INTERFACE_INCLUDE_DIRECTORIES "${SKIA_HEADERS}"
+	IMPORTED_LINK_INTERFACE_LIBRARIES "${LIBDL};${FONTCONFIG_LIBRARIES};${PNG_LIBRARIES};${LIBPTHREAD};${LIBGL}"
+)
+add_dependencies(SKIA SKIA_build)
