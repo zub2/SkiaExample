@@ -13,8 +13,7 @@ else ()
 endif ()
 
 # I wanted to expose (almost) all Skia options as CMake options but sadly
-# GN is a really bad tool - It produces non-overridable configure
-# errors like:
+# GN is a really bad tool - It produces non-overridable configure errors like:
 #
 # The variable "skia_use_system_libjpeg_turbo" was set as a build argument but never appeared in a declare_args() block in any buildfile.
 #
@@ -65,7 +64,7 @@ ExternalProject_Add(SKIA_build
 	CONFIGURE_COMMAND ${SKIA_SRC}/bin/gn gen --root=${SKIA_SRC} ${SKIA_BUILD_DIR}
 		# getting right the wonky cmake string handling (with the extra level of ExternalProject)
 		# and the undocumented args handling of GN is a special treat
-		# at least Cmake 3.0 gives us the line continuation feature wich is cool
+		# at least Cmake 3.0 has the line continuation feature wich is cool
 		# but then the args can't be indented because GN is written by somone with overly strong opinions:
 		# "You got a tab character in here. Tabs are evil. Convert to spaces."
 		"--args=\
@@ -104,7 +103,7 @@ skia_use_piex=false \
 skia_use_dng_sdk=false \
 "
 	BUILD_COMMAND ninja -C ${SKIA_BUILD_DIR} -j1
-	# AFAIK there is not install step provided
+	# there is no install step provided
 	INSTALL_COMMAND true
 )
 
@@ -154,13 +153,13 @@ endif ()
 
 # GN doesn't seem to do any fancy stuff with library dependencies - it just
 # asks the compiler to link to them w/o any fany search strategies. This
-# also means that whatever we find here is not guaranteed to be the same as
+# also means that whatever is found here is not guaranteed to be the same as
 # what GN finds. :-(
 # Anyway, using plain find_library() seems to be the next closest thing,
 # so even if some libraries provide pkg_config or special packages for CMake,
 # only find_library() is used here.
-# This is needed only for static library build where we need to the dependencies
-# explicitly.
+# This is needed only for static library build where the dependencies have
+# to be added explicitly.
 if (NOT EXT_SKIA_SHARED)
 	function(ADD_SKIA_LIBRARY_DEPENDENCY LIB_NAME_LIST)
 		foreach(LIB_NAME ${LIB_NAME_LIST})
